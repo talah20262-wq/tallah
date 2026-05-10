@@ -1,69 +1,598 @@
 <!DOCTYPE html>
-<div class="shipmentBox">
+<html lang="ar" dir="rtl">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tatpo | تتبع الشحنات</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Cairo',sans-serif;
+}
+
+body{
+background:#f5f1ed;
+color:#111;
+min-height:100vh;
+}
+
+header{
+background:#111;
+color:#fff;
+padding:20px;
+text-align:center;
+font-size:28px;
+font-weight:800;
+}
+
+.container{
+width:95%;
+max-width:1200px;
+margin:auto;
+padding:20px;
+}
+
+.card{
+background:#fff;
+padding:20px;
+border-radius:20px;
+margin-bottom:20px;
+box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+.title{
+font-size:24px;
+font-weight:800;
+margin-bottom:15px;
+}
+
+input,
+textarea,
+select{
+width:100%;
+padding:14px;
+border-radius:12px;
+border:1px solid #ddd;
+margin-top:10px;
+font-size:16px;
+outline:none;
+}
+
+button{
+background:#111;
+color:#fff;
+border:none;
+padding:14px 20px;
+border-radius:12px;
+cursor:pointer;
+font-size:16px;
+font-weight:700;
+margin-top:10px;
+transition:.3s;
+}
+
+button:hover{
+transform:scale(1.02);
+}
+
+.hidden{
+display:none;
+}
+
+.shipment{
+padding:15px;
+border:1px solid #eee;
+border-radius:15px;
+margin-top:15px;
+line-height:2;
+}
+
+img{
+width:100%;
+border-radius:15px;
+margin-top:15px;
+}
+
+.status{
+display:inline-block;
+padding:8px 14px;
+border-radius:10px;
+font-weight:700;
+margin-top:10px;
+}
+
+.review{
+background:#fff3cd;
+color:#856404;
+}
+
+.confirmed{
+background:#d4edda;
+color:#155724;
+}
+
+.delivered{
+background:#cce5ff;
+color:#004085;
+}
+
+.rejected{
+background:#f8d7da;
+color:#721c24;
+}
+
+.aiBox{
+background:#111;
+padding:20px;
+border-radius:20px;
+margin-top:20px;
+color:#fff;
+}
+
+.loader{
+width:100%;
+height:6px;
+background:#eee;
+border-radius:20px;
+overflow:hidden;
+margin-top:10px;
+display:none;
+}
+
+.loader div{
+height:100%;
+width:40%;
+background:#111;
+animation:load 1s infinite linear;
+}
+
+@keyframes load{
+0%{transform:translateX(-100%);}
+100%{transform:translateX(300%);}
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+Tatpo | تتبع الشحنات
+</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+
+<div class="card" id="loginBox">
+
+<div class="title">
+تتبع شحنتك
+</div>
+
+<input type="text" id="loginInput" placeholder="ادخل رقم الهاتف أو كود المالك">
+
+<button onclick="login()">
+دخول
+</button>
+
+</div>
+
+<!-- USER PAGE -->
+
+<div class="card hidden" id="userPage">
+
+<div class="title">
+بيانات الشحنة
+</div>
+
+<div id="shipmentResult"></div>
+
+<div class="aiBox">
+
+<h2>
+مساعد الموقع AI
+</h2>
+
+<input type="text" id="aiInput" placeholder="اسأل عن الشحنة أو الموقع">
+
+<button onclick="askAI()">
+إرسال
+</button>
+
+<div id="aiResponse" style="margin-top:15px;"></div>
+
+</div>
+
+</div>
+
+<!-- ADMIN -->
+
+<div class="card hidden" id="adminPage">
+
+<div class="title">
+لوحة المالك
+</div>
+
+<input type="text" id="phone" placeholder="رقم الهاتف">
+
+<input type="text" id="name" placeholder="اسم العميل">
+
+<textarea id="details" placeholder="تفاصيل الشحنة"></textarea>
+
+<select id="status">
+
+<option value="جاري المراجعة">
+جاري المراجعة
+</option>
+
+<option value="تم التأكيد في شركة الشحن">
+تم التأكيد في شركة الشحن
+</option>
+
+<option value="تم التسليم">
+تم التسليم
+</option>
+
+<option value="تم الرفض">
+تم الرفض
+</option>
+
+</select>
+
+<input type="file" id="image">
+
+<div class="loader" id="loader">
+<div></div>
+</div>
+
+<button onclick="addShipment()">
+رفع الشحنة
+</button>
+
+<hr style="margin:20px 0;">
+
+<div id="allShipments"></div>
+
+</div>
+
+</div>
+
+<script>
+
+/* Firebase */
+
+const firebaseConfig = {
+
+apiKey: "YOUR_API_KEY",
+
+authDomain: "YOUR_PROJECT.firebaseapp.com",
+
+databaseURL: "https://tatpo-c40ce-default-rtdb.firebaseio.com",
+
+projectId: "YOUR_PROJECT_ID",
+
+storageBucket: "YOUR_PROJECT.appspot.com",
+
+messagingSenderId: "YOUR_SENDER_ID",
+
+appId: "YOUR_APP_ID"
+
+};
+
+firebase.initializeApp(firebaseConfig);
+
+firebase.auth().signInAnonymously();
+
+const db = firebase.database();
+
+/* ADMIN CODE */
+
+const ADMIN_CODE = "2009257";
+
+/* CLOUDINARY */
+
+const CLOUD_NAME = "YOUR_CLOUD_NAME";
+
+const UPLOAD_PRESET = "YOUR_UPLOAD_PRESET";
+
+/* LOGIN */
+
+function login(){
+
+const value = document.getElementById("loginInput").value.trim();
+
+if(value === ADMIN_CODE){
+
+document.getElementById("loginBox").classList.add("hidden");
+
+document.getElementById("adminPage").classList.remove("hidden");
+
+loadShipments();
+
+return;
+
+}
+
+searchShipment(value);
+
+}
+
+/* SEARCH */
+
+function searchShipment(phone){
+
+db.ref("shipments/" + phone).once("value")
+
+.then(snapshot=>{
+
+if(snapshot.exists()){
+
+const data = snapshot.val();
+
+let statusClass = "review";
+
+if(data.status.includes("التأكيد")) statusClass = "confirmed";
+
+if(data.status.includes("التسليم")) statusClass = "delivered";
+
+if(data.status.includes("الرفض")) statusClass = "rejected";
+
+document.getElementById("loginBox").classList.add("hidden");
+
+document.getElementById("userPage").classList.remove("hidden");
+
+document.getElementById("shipmentResult").innerHTML = `
+
+<div class="shipment">
+
+<p><b>الاسم:</b> ${data.name}</p>
+
+<p><b>رقم الهاتف:</b> ${phone}</p>
+
+<p><b>تفاصيل الشحنة:</b> ${data.details}</p>
+
+<div class="status ${statusClass}">
+${data.status}
+</div>
+
+${data.image ? `<img src="${data.image}">` : ""}
+
+</div>
+
+`;
+
+}else{
+
+alert("لا توجد شحنة لهذا الرقم");
+
+}
+
+});
+
+}
+
+/* ADD SHIPMENT */
+
+async function addShipment(){
+
+const phone = document.getElementById("phone").value.trim();
+
+const name = document.getElementById("name").value.trim();
+
+const details = document.getElementById("details").value.trim();
+
+const status = document.getElementById("status").value;
+
+const file = document.getElementById("image").files[0];
+
+if(!phone || !name || !details){
+
+alert("اكمل البيانات");
+
+return;
+
+}
+
+document.getElementById("loader").style.display = "block";
+
+let imageUrl = "";
+
+if(file){
+
+const formData = new FormData();
+
+formData.append("file", file);
+
+formData.append("upload_preset", UPLOAD_PRESET);
+
+const response = await fetch(
+
+`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+
+{
+
+method:"POST",
+
+body:formData
+
+}
+
+);
+
+const data = await response.json();
+
+imageUrl = data.secure_url;
+
+}
+
+await db.ref("shipments/" + phone).set({
+
+name:name,
+
+details:details,
+
+status:status,
+
+image:imageUrl,
+
+time:Date.now()
+
+});
+
+document.getElementById("loader").style.display = "none";
+
+alert("تم رفع الشحنة");
+
+document.getElementById("phone").value = "";
+
+document.getElementById("name").value = "";
+
+document.getElementById("details").value = "";
+
+document.getElementById("image").value = "";
+
+loadShipments();
+
+}
+
+/* LOAD */
+
+function loadShipments(){
+
+db.ref("shipments").on("value",snapshot=>{
+
+const data = snapshot.val();
+
+let html = "";
+
+for(let phone in data){
+
+const s = data[phone];
+
+html += `
+
+<div class="shipment">
+
 <p><b>الاسم:</b> ${s.name}</p>
+
 <p><b>الهاتف:</b> ${phone}</p>
+
 <p><b>التفاصيل:</b> ${s.details}</p>
 
 <select onchange="updateStatus('${phone}',this.value)">
-<option ${s.status==='جاري المراجعة'?'selected':''}>جاري المراجعة</option>
-<option ${s.status==='تم التأكيد في شركة الشحن'?'selected':''}>تم التأكيد في شركة الشحن</option>
-<option ${s.status==='تم التسليم'?'selected':''}>تم التسليم</option>
-<option ${s.status==='تم الرفض'?'selected':''}>تم الرفض</option>
+
+<option ${s.status==="جاري المراجعة"?"selected":""}>
+جاري المراجعة
+</option>
+
+<option ${s.status==="تم التأكيد في شركة الشحن"?"selected":""}>
+تم التأكيد في شركة الشحن
+</option>
+
+<option ${s.status==="تم التسليم"?"selected":""}>
+تم التسليم
+</option>
+
+<option ${s.status==="تم الرفض"?"selected":""}>
+تم الرفض
+</option>
+
 </select>
 
-${s.image ? `<img src="${s.image}">` : ''}
+${s.image ? `<img src="${s.image}">` : ""}
 
-<button onclick="deleteShipment('${phone}')">حذف</button>
+<button onclick="deleteShipment('${phone}')">
+حذف
+</button>
+
 </div>
+
 `;
 
 }
 
+document.getElementById("allShipments").innerHTML = html;
 
-document.getElementById('allShipments').innerHTML = html;
-
-});
-}
-
-function updateStatus(phone,newStatus){
-
-db.ref('shipments/' + phone).update({
-status:newStatus
 });
 
 }
+
+/* UPDATE STATUS */
+
+function updateStatus(phone,status){
+
+db.ref("shipments/" + phone).update({
+
+status:status
+
+});
+
+}
+
+/* DELETE */
 
 function deleteShipment(phone){
 
-if(confirm('حذف الشحنة؟')){
-db.ref('shipments/' + phone).remove();
+if(confirm("حذف الشحنة؟")){
+
+db.ref("shipments/" + phone).remove();
+
 }
 
 }
+
+/* AI */
 
 function askAI(){
 
-const q = document.getElementById('aiQuestion').value;
-let answer = '';
+const q = document.getElementById("aiInput").value;
 
-if(q.includes('شحن')){
-answer = 'يمكنك متابعة حالة الشحنة من بيانات الطلب الظاهرة أمامك.';
+let answer = "";
+
+if(q.includes("شحنة")){
+
+answer = "يمكنك متابعة حالة الشحنة من الصفحة الحالية.";
+
 }
-else if(q.includes('تسليم')){
-answer = 'عند تغيير الحالة إلى تم التسليم سيتم تحديثها فوراً.';
+
+else if(q.includes("تسليم")){
+
+answer = "عند تغيير الحالة إلى تم التسليم سيظهر ذلك مباشرة.";
+
 }
-else if(q.includes('رفض')){
-answer = 'في حالة الرفض تواصل مع خدمة العملاء.';
+
+else if(q.includes("رفض")){
+
+answer = "في حالة الرفض تواصل مع خدمة العملاء.";
+
 }
-else if(q.includes('رقم')){
-answer = 'ادخل رقم الهاتف المرتبط بالطلب.';
+
+else if(q.includes("رقم")){
+
+answer = "ادخل رقم الهاتف المرتبط بالشحنة.";
+
 }
+
 else{
-answer = 'أهلاً بك في نظام تتبع الشحنات الخاص بالموقع ❤️';
+
+answer = "أهلاً بك في نظام تتبع الشحنات الخاص بموقع Tatpo ❤️";
+
 }
 
+document.getElementById("aiResponse").innerHTML = answer;
 
-document.getElementById('aiResponse').innerHTML = answer;
 }
 
 </script>
