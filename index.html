@@ -10,21 +10,23 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
     <style>
-        :root { --main: #000; --bg: #f5f1ed; --card: #fff; }
+        :root { --main: #000; --bg: #f5f1ed; --card: #fff; --accent: #1da1f2; }
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
         body{background:var(--bg); color:#111; min-height:100vh;}
         header{background:var(--main); padding:20px; text-align:center; color:#fff;}
         .logo-container{display:flex; align-items:center; justify-content:center; gap:10px;}
         #siteLogoImg{width:55px; height:55px; border-radius:50%; object-fit: cover; display:none; border:2px solid #fff;}
-        .verified-badge{color:#1da1f2; font-size:20px;}
+        .verified-badge{color:var(--accent); font-size:20px;}
         .container{width:95%; max-width:900px; margin:auto; padding:20px;}
         .card{background:var(--card); padding:25px; border-radius:25px; box-shadow:0 10px 40px rgba(0,0,0,.05); margin-bottom:20px;}
-        input, button, textarea{width:100%; padding:15px; border-radius:15px; border:1px solid #ddd; margin-top:10px; font-size:16px; outline:none;}
+        input, button, select, textarea{width:100%; padding:15px; border-radius:15px; border:1px solid #ddd; margin-top:10px; font-size:16px; outline:none;}
         button{background:var(--main); color:#fff; font-weight:800; cursor:pointer; border:none; transition:0.3s;}
-        button:disabled{background:#ccc;}
+        button:hover{opacity:0.8;}
         .hidden{display:none;}
-        .admin-section{border-top: 1px solid #eee; padding-top:20px; margin-top:20px;}
-        .status-item {background:#f9f9f9; padding:15px; border-radius:15px; margin-top:10px; border-right:5px solid #000;}
+        .admin-section{border-top: 2px dashed #eee; padding-top:20px; margin-top:25px;}
+        .status-item {background:#f9f9f9; padding:15px; border-radius:15px; margin-top:10px; border-right:5px solid var(--main);}
+        .shipment-img{width:100%; border-radius:20px; margin-top:15px; border:1px solid #eee;}
+        .badge-status{display:inline-block; padding:5px 15px; background:var(--main); color:#fff; border-radius:10px; font-size:14px; margin-top:5px;}
     </style>
 </head>
 <body>
@@ -40,29 +42,38 @@
 <div class="container">
     <div id="loginBox" class="card">
         <h2>دخول النظام</h2>
-        <p style="font-size:13px; color:#666;">أدخل رقم الهاتف للتتبع أو كود الإدارة</p>
-        <input type="text" id="loginInput" placeholder="01xxxxxxxxx">
+        <input type="text" id="loginInput" placeholder="أدخل رقم الهاتف أو كود المالك">
         <button onclick="handleLogin()">دخول</button>
     </div>
 
     <div id="adminPage" class="card hidden">
-        <h2>إعدادات الهوية والبراند</h2>
-        <input type="text" id="newSiteName" placeholder="اسم الموقع الجديد">
-        <p style="margin-top:10px; font-size:14px;">ارفع لوجو الموقع الجديد:</p>
+        <h2>إعدادات الموقع</h2>
+        <input type="text" id="newSiteName" placeholder="تغيير اسم البراند">
+        <p style="font-size:12px; margin-top:10px;">رفع لوجو الموقع:</p>
         <input type="file" id="siteLogoFile" accept="image/*">
-        <button onclick="updateBranding()" id="brandBtn" style="background:#444;">تحديث الهوية (اسم + لوجو)</button>
+        <button onclick="updateBranding()" id="brandBtn" style="background:#444;">حفظ تغييرات الهوية</button>
         
         <div class="admin-section">
-            <h2>إضافة شحنة عميل</h2>
-            <input type="text" id="custPhone" placeholder="رقم هاتف العميل">
+            <h2>إضافة / تحديث شحنة</h2>
+            <input type="text" id="custPhone" placeholder="رقم هاتف العميل (مهم جداً)">
             <input type="text" id="custName" placeholder="اسم العميل">
-            <p style="margin-top:10px; font-size:14px;">صورة المنتج أو البوليصة:</p>
+            
+            <p style="font-size:12px; margin-top:10px;">حالة الشحنة (ستظهر في الإشعار):</p>
+            <select id="shipmentStatus">
+                <option value="قيد التجهيز في المصنع">قيد التجهيز في المصنع</option>
+                <option value="خرجت الشحنة مع المندوب">خرجت الشحنة مع المندوب</option>
+                <option value="تم التسليم بنجاح">تم التسليم بنجاح</option>
+                <option value="تم تأجيل الموعد">تم تأجيل الموعد</option>
+                <option value="مرتجع">مرتجع</option>
+            </select>
+
+            <p style="font-size:12px; margin-top:10px;">صورة البوليصة أو المنتج:</p>
             <input type="file" id="custImage" accept="image/*">
-            <button onclick="uploadShipment()" id="saveBtn">حفظ الشحنة في النظام</button>
+            <button onclick="uploadShipment()" id="saveBtn">حفظ وإرسال التحديث</button>
         </div>
 
         <div class="admin-section">
-            <h2>سجل المراجعة (أرقام بحثت عن شحنتها)</h2>
+            <h2>أرقام في انتظار المراجعة</h2>
             <div id="pendingList"></div>
         </div>
         
@@ -71,13 +82,13 @@
 
     <div id="userPage" class="card hidden">
         <div id="userResult"></div>
-        <button onclick="requestNotif()" style="background:#27ae60; margin-top:10px;">تفعيل إشعارات خروج الشحنة</button>
+        <button onclick="requestNotif()" style="background:#27ae60; margin-top:10px;">تفعيل إشعارات حالة الشحن</button>
         <button onclick="logout()" style="background:#666; margin-top:15px;">خروج</button>
     </div>
 </div>
 
 <script>
-// --- إعدادات Firebase من صورك ---
+// إعدادات Firebase و Cloudinary
 const firebaseConfig = {
     apiKey: "AIzaSyAFUX5NmGFR9MLFzjIa-MkBUOk6OMz5Low",
     authDomain: "tatpo-c40ce.firebaseapp.com",
@@ -88,7 +99,6 @@ const firebaseConfig = {
     appId: "1:916778556013:web:dfdfd7c79fbdf9f334472"
 };
 
-// --- إعدادات Cloudinary ---
 const CLOUD_NAME = "dfbqpjtvm"; 
 const UPLOAD_PRESET = "tatpo-c40ce";
 
@@ -96,7 +106,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const ADMIN_CODE = "2009257";
 
-// حفظ الجلسة عند Refresh الموقع
 window.onload = () => {
     loadBranding();
     const session = localStorage.getItem('tallah_session');
@@ -129,7 +138,7 @@ function logout() {
     location.reload();
 }
 
-// دالة الرفع العامة لـ Cloudinary
+// دالة الرفع
 async function uploadToCloudinary(file) {
     const formData = new FormData();
     formData.append('file', file);
@@ -140,14 +149,12 @@ async function uploadToCloudinary(file) {
     return await res.json();
 }
 
-// تحديث اسم الموقع واللوجو المرفوع
+// تحديث الهوية (الاسم + اللوجو)
 async function updateBranding() {
     const name = document.getElementById('newSiteName').value;
     const file = document.getElementById('siteLogoFile').files[0];
     const btn = document.getElementById('brandBtn');
-    
-    btn.disabled = true;
-    btn.innerText = "جاري التحديث...";
+    btn.disabled = true; btn.innerText = "جاري الحفظ...";
 
     let logoUrl = "";
     if(file) {
@@ -160,9 +167,8 @@ async function updateBranding() {
     if(logoUrl) updates.logo = logoUrl;
 
     db.ref('settings').update(updates).then(() => {
-        alert("تم تحديث الهوية بنجاح!");
-        btn.disabled = false;
-        btn.innerText = "تحديث الهوية (اسم + لوجو)";
+        alert("تم تحديث بيانات الموقع!");
+        btn.disabled = false; btn.innerText = "حفظ تغييرات الهوية";
     });
 }
 
@@ -170,10 +176,7 @@ function loadBranding() {
     db.ref('settings').on('value', s => {
         const d = s.val();
         if(d) {
-            if(d.name) {
-                document.getElementById('displaySiteName').innerText = d.name;
-                document.getElementById('siteTitleTag').innerText = d.name;
-            }
+            if(d.name) document.getElementById('displaySiteName').innerText = d.name;
             if(d.logo) {
                 const img = document.getElementById('siteLogoImg');
                 img.src = d.logo; img.style.display = "block";
@@ -182,44 +185,58 @@ function loadBranding() {
     });
 }
 
-// رفع وحفظ الشحنة
+// حفظ الشحنة مع الحالة (Status)
 async function uploadShipment() {
     const file = document.getElementById('custImage').files[0];
     const phone = document.getElementById('custPhone').value;
     const name = document.getElementById('custName').value;
+    const status = document.getElementById('shipmentStatus').value;
     const btn = document.getElementById('saveBtn');
 
-    if(!file || !phone) return alert("يرجى اختيار صورة وإدخال رقم العميل");
+    if(!phone) return alert("يرجى إدخال رقم الهاتف");
 
-    btn.disabled = true;
-    btn.innerText = "جاري رفع الشحنة...";
+    btn.disabled = true; btn.innerText = "جاري المعالجة...";
 
-    try {
+    let imageUrl = "";
+    if(file) {
         const data = await uploadToCloudinary(file);
-        await db.ref('shipments/' + phone).set({
-            name, image: data.secure_url, status: "تم التجهيز - قيد الشحن", time: new Date().toLocaleString()
-        });
-        alert("تم حفظ بيانات العميل بنجاح!");
-    } catch(e) { alert("حدث خطأ في الرفع"); }
-    
-    btn.disabled = false;
-    btn.innerText = "حفظ الشحنة في النظام";
+        imageUrl = data.secure_url;
+    }
+
+    const shipmentData = {
+        name,
+        status,
+        time: new Date().toLocaleString()
+    };
+    if(imageUrl) shipmentData.image = imageUrl;
+
+    db.ref('shipments/' + phone).update(shipmentData).then(() => {
+        alert("تم تحديث حالة الشحنة بنجاح!");
+        btn.disabled = false; btn.innerText = "حفظ وإرسال التحديث";
+    });
 }
 
+// عرض للعميل
 function checkUserShipment(phone) {
     db.ref('shipments/' + phone).on('value', s => {
         if(s.exists()) {
             showPage('userPage');
             const d = s.val();
             document.getElementById('userResult').innerHTML = `
-                <h2>مرحباً، ${d.name}</h2>
-                <p style="margin:10px 0;">حالة شحنتك: <b style="color:green;">${d.status}</b></p>
-                <img src="${d.image}" style="width:100%; border-radius:15px; border:1px solid #eee;">
-                <p style="font-size:12px; color:#999; margin-top:10px;">آخر تحديث: ${d.time}</p>
+                <h2>أهلاً بك، ${d.name || 'عميل طلة'}</h2>
+                <div class="badge-status">${d.status}</div>
+                <p style="margin-top:15px; font-size:14px; color:#666;">توقيت التحديث: ${d.time}</p>
+                ${d.image ? `<img src="${d.image}" class="shipment-img">` : ''}
             `;
+            // محاكاة إشعار بسيط إذا تغيرت الحالة
+            if(window.Notification && Notification.permission === "granted") {
+                new Notification("تحديث من " + document.getElementById('displaySiteName').innerText, {
+                    body: "حالة شحنتك الآن: " + d.status
+                });
+            }
         } else {
             db.ref('logs/' + phone).set({ phone, time: new Date().toLocaleString() });
-            alert("عفواً، لا توجد شحنة مسجلة لهذا الرقم. تم إبلاغ المالك للمراجعة.");
+            alert("الرقم غير مسجل. تم إرسال طلبك للإدارة.");
         }
     });
 }
@@ -228,15 +245,15 @@ function loadPendingLog() {
     db.ref('logs').on('value', s => {
         let html = "";
         s.forEach(child => {
-            html += `<div class="status-item">رقم بحث عن شحنته: ${child.val().phone} <br> <small>التوقيت: ${child.val().time}</small></div>`;
+            html += `<div class="status-item">رقم يبحث عن شحنة: ${child.val().phone} <br> <small>${child.val().time}</small></div>`;
         });
-        document.getElementById('pendingList').innerHTML = html || "لا توجد عمليات بحث جديدة";
+        document.getElementById('pendingList').innerHTML = html || "لا توجد طلبات";
     });
 }
 
 function requestNotif() {
     Notification.requestPermission().then(p => {
-        if(p === 'granted') alert("تم تفعيل الإشعارات! ستصلك رسالة عند خروج الشحنة.");
+        if(p === 'granted') alert("تم تفعيل الإشعارات بنجاح!");
     });
 }
 </script>
