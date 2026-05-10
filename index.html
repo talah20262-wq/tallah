@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<div class="shipmentBox">
+<p><b>الاسم:</b> ${s.name}</p>
+<p><b>الهاتف:</b> ${phone}</p>
+<p><b>التفاصيل:</b> ${s.details}</p>
+
+<select onchange="updateStatus('${phone}',this.value)">
+<option ${s.status==='جاري المراجعة'?'selected':''}>جاري المراجعة</option>
+<option ${s.status==='تم التأكيد في شركة الشحن'?'selected':''}>تم التأكيد في شركة الشحن</option>
+<option ${s.status==='تم التسليم'?'selected':''}>تم التسليم</option>
+<option ${s.status==='تم الرفض'?'selected':''}>تم الرفض</option>
+</select>
+
+${s.image ? `<img src="${s.image}">` : ''}
+
+<button onclick="deleteShipment('${phone}')">حذف</button>
+</div>
+`;
+
+}
+
+
+document.getElementById('allShipments').innerHTML = html;
+
+});
+}
+
+function updateStatus(phone,newStatus){
+
+db.ref('shipments/' + phone).update({
+status:newStatus
+});
+
+}
+
+function deleteShipment(phone){
+
+if(confirm('حذف الشحنة؟')){
+db.ref('shipments/' + phone).remove();
+}
+
+}
+
+function askAI(){
+
+const q = document.getElementById('aiQuestion').value;
+let answer = '';
+
+if(q.includes('شحن')){
+answer = 'يمكنك متابعة حالة الشحنة من بيانات الطلب الظاهرة أمامك.';
+}
+else if(q.includes('تسليم')){
+answer = 'عند تغيير الحالة إلى تم التسليم سيتم تحديثها فوراً.';
+}
+else if(q.includes('رفض')){
+answer = 'في حالة الرفض تواصل مع خدمة العملاء.';
+}
+else if(q.includes('رقم')){
+answer = 'ادخل رقم الهاتف المرتبط بالطلب.';
+}
+else{
+answer = 'أهلاً بك في نظام تتبع الشحنات الخاص بالموقع ❤️';
+}
+
+
+document.getElementById('aiResponse').innerHTML = answer;
+}
+
+</script>
+
+</body>
+</html>
