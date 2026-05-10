@@ -3,97 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tallah Shipment | تتبع شحنتك</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <title>Tallah Smart System | نظام طلة للأتمتة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
     <style>
-        /* التنسيقات التي اخترتها مع تحسينات بسيطة */
+        :root { --main: #000; --bg: #f5f1ed; --card: #fff; }
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif;}
-        body{background:#f5f1ed;color:#111;min-height:100vh;}
-        header{background:#000;padding:35px 20px;text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.15);}
-        .logo{font-size:55px;font-weight:900;}
-        .sub{font-size:18px;opacity:.8;margin-top:10px;}
-        .container{width:95%;max-width:1200px;margin:auto;padding:20px;}
-        .card{background:#fff;padding:25px;border-radius:25px;margin-bottom:20px;box-shadow:0 10px 30px rgba(0,0,0,.08);}
-        .title{font-size:35px;font-weight:900;margin-bottom:20px;}
-        input, textarea, select{width:100%;padding:18px;border-radius:18px;border:1px solid #ddd;margin-top:12px;font-size:17px;outline:none;background:#f8f8f8;}
-        button{background:#000;color:#fff;border:none;padding:16px 25px;border-radius:18px;cursor:pointer;font-size:18px;font-weight:800;margin-top:15px;transition:.3s; width: 100%;}
-        button:hover{transform:scale(1.02); background: #333;}
+        body{background:var(--bg); color:#111; min-height:100vh;}
+        header{background:var(--main); padding:25px; text-align:center; color:#fff; box-shadow:0 10px 30px rgba(0,0,0,.1);}
+        .container{width:95%; max-width:900px; margin:auto; padding:20px;}
+        .card{background:var(--card); padding:30px; border-radius:25px; box-shadow:0 10px 40px rgba(0,0,0,.05); margin-bottom:20px;}
+        .title{font-size:28px; font-weight:900; margin-bottom:15px; border-right:5px solid var(--main); padding-right:15px;}
+        input, select, button, textarea{width:100%; padding:15px; border-radius:15px; border:1px solid #ddd; margin-top:12px; font-size:16px; outline:none;}
+        button{background:var(--main); color:#fff; font-weight:800; cursor:pointer; border:none; transition:0.3s;}
+        button:hover{opacity:0.8; transform:translateY(-2px);}
         .hidden{display:none;}
-        .shipment{padding:20px;border-radius:20px;border:1px solid #eee;margin-top:15px;line-height:2.2;background:#fafafa; position: relative;}
-        img{width:100%; max-width: 400px; border-radius: 20px; margin-top: 15px; display: block;}
-        .status{display:inline-block;padding:10px 18px;border-radius:14px;font-weight:800;margin-top:15px;}
-        .review{background:#fff3cd;color:#856404;}
-        .confirmed{background:#d4edda;color:#155724;}
-        .delivered{background:#cce5ff;color:#004085;}
-        .rejected{background:#f8d7da;color:#721c24;}
-        .aiBox{background:#111;padding:25px;border-radius:25px;margin-top:25px;color:#fff;}
-        .loader{width:100%;height:6px;background:#ddd;border-radius:20px;overflow:hidden;margin-top:15px;display:none;}
-        .loader div{height:100%;width:40%;background:#000;animation:load 1s infinite linear;}
-        @keyframes load{0%{transform:translateX(-100%);}100%{transform:translateX(300%);}}
-        .delete-btn {background: #ff4d4d; margin-top: 10px; font-size: 14px; padding: 10px;}
+        .pdf-area{background:#f9f9f9; border:2px dashed #ccc; padding:25px; border-radius:20px; text-align:center; margin-top:20px;}
+        .log{background:#111; color:#0f0; padding:15px; border-radius:15px; height:180px; overflow-y:auto; font-family:monospace; font-size:13px; margin-top:15px; direction:ltr; text-align:left;}
+        .success-tag{color:#27ae60; font-weight:bold;}
     </style>
 </head>
-
 <body>
 
 <header>
-    <div class="logo">Tallah Shipment</div>
-    <div class="sub">تتبع شحنة براند طلة بكل سهولة</div>
+    <h1 style="letter-spacing:4px;">TALLAH</h1>
+    <p>النظام الذكي لمعالجة بوالص ABS</p>
 </header>
 
 <div class="container">
-
-    <div class="card" id="loginBox">
-        <div class="title">تتبع شحنتك</div>
-        <input type="text" id="loginInput" placeholder="ادخل رقم الهاتف أو كود المالك">
-        <button onclick="login()">دخول النظام</button>
+    <div id="loginBox" class="card">
+        <div class="title">دخول النظام</div>
+        <input type="text" id="loginInput" placeholder="ادخل رقم الهاتف للتتبع أو كود الإدارة">
+        <button onclick="handleLogin()">دخول</button>
     </div>
 
-    <div class="card hidden" id="userPage">
-        <div class="title">بيانات شحنتك</div>
-        <div id="shipmentResult"></div>
+    <div id="adminPage" class="card hidden">
+        <div class="title">معالجة بوالص الشحن (PDF)</div>
+        <p style="font-size:14px; color:#666;">ارفع ملف الـ PDF المستخرج من شركة ABS وسيقوم النظام بسحب البيانات فوراً.</p>
         
-        <div class="aiBox">
-            <h3>مساعد طلة الذكي AI</h3>
-            <p style="font-size: 14px; opacity: 0.8; margin-bottom: 10px;">اسألني أي شيء عن شحنتك أو مواعيد التوصيل</p>
-            <input type="text" id="aiInput" placeholder="مثلاً: متى ستصل شحنتي؟" style="background: #222; color: #fff; border: 1px solid #444;">
-            <button onclick="askAI()" style="background: #fff; color: #000;">إرسال السؤال</button>
-            <div id="aiResponse" style="margin-top:15px; background: #222; padding: 15px; border-radius: 15px; border-right: 4px solid #fff;"></div>
+        <div class="pdf-area">
+            <input type="file" id="pdfFile" accept=".pdf" style="border:none; background:none;">
+            <button onclick="startAutoProcess()" style="background:#27ae60; margin-top:15px;">بدء الاستخراج والحفظ التلقائي</button>
         </div>
-        <button onclick="location.reload()" style="background: #666; margin-top: 20px;">خروج</button>
+
+        <div id="processLog" class="log">في انتظار رفع الملف...</div>
+        
+        <button onclick="location.reload()" style="background:#666; margin-top:20px;">تسجيل الخروج</button>
     </div>
 
-    <div class="card hidden" id="adminPage">
-        <div class="title">لوحة التحكم (طلة)</div>
-        <input type="text" id="phone" placeholder="رقم هاتف العميل">
-        <input type="text" id="name" placeholder="اسم العميل">
-        <textarea id="details" placeholder="تفاصيل الطلب (مثلاً: فستان شيفون أسود)"></textarea>
-        <select id="status">
-            <option value="جاري المراجعة">جاري المراجعة</option>
-            <option value="تم التأكيد في شركة الشحن">تم التأكيد في شركة الشحن</option>
-            <option value="تم التسليم">تم التسليم</option>
-            <option value="تم الرفض">تم الرفض</option>
-        </select>
-        <p style="margin-top: 15px; font-weight: bold;">صورة الورقة/البوليصة:</p>
-        <input type="file" id="image" accept="image/*">
-        
-        <div class="loader" id="loader"><div></div></div>
-        <button id="addBtn" onclick="addShipment()">إضافة الشحنة للنظام</button>
-        
-        <hr style="margin:25px 0;">
-        <h3>جميع الشحنات الحالية:</h3>
-        <div id="allShipments"></div>
-        <button onclick="location.reload()" style="background: #666;">خروج</button>
+    <div id="userPage" class="card hidden">
+        <div class="title">حالة شحنتك</div>
+        <div id="userResult"></div>
+        <button onclick="location.reload()" style="background:#666; margin-top:20px;">رجوع</button>
     </div>
-
 </div>
 
 <script>
-/* إعدادات Firebase الخاصة بمشروعك */
+// إعدادات Firebase الخاصة بمشروعك
 const firebaseConfig = {
     apiKey: "AIzaSyAFUX5NmGFR9MLFzjIa-MkBUOk6OMz5Low",
     authDomain: "tatpo-c40ce.firebaseapp.com",
@@ -106,130 +76,83 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
 const ADMIN_CODE = "2009257";
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-// لرفع الصور بدون استهلاك سيرفرك، سنستخدم الرفع المباشر (Base64) أو يمكنك ربط Cloudinary. 
-// هنا سأقوم بتحويل الصورة لـ Base64 وحفظها في Firebase Database مباشرة للسهولة وسرعة التنفيذ.
-
-function login(){
-    const value = document.getElementById("loginInput").value.trim();
-    if(value === ADMIN_CODE){
+function handleLogin() {
+    const val = document.getElementById("loginInput").value.trim();
+    if(val === ADMIN_CODE) {
         document.getElementById("loginBox").classList.add("hidden");
         document.getElementById("adminPage").classList.remove("hidden");
-        loadShipments();
-        return;
+    } else if(val !== "") {
+        checkStatus(val);
     }
-    searchShipment(value);
 }
 
-function searchShipment(phone){
+function checkStatus(phone) {
     db.ref("shipments/" + phone).once("value").then(snapshot => {
-        if(snapshot.exists()){
-            const data = snapshot.val();
-            let statusClass = "review";
-            if(data.status.includes("التأكيد")) statusClass = "confirmed";
-            if(data.status.includes("التسليم")) statusClass = "delivered";
-            if(data.status.includes("الرفض")) statusClass = "rejected";
-
+        if(snapshot.exists()) {
+            const d = snapshot.val();
             document.getElementById("loginBox").classList.add("hidden");
             document.getElementById("userPage").classList.remove("hidden");
-            document.getElementById("shipmentResult").innerHTML = `
-                <div class="shipment">
-                    <p><b>الاسم:</b> ${data.name}</p>
-                    <p><b>رقم الهاتف:</b> ${phone}</p>
-                    <p><b>تفاصيل الشحنة:</b> ${data.details}</p>
-                    <div class="status ${statusClass}">${data.status}</div>
-                    ${data.image ? `<img src="${data.image}">` : ""}
+            document.getElementById("userResult").innerHTML = `
+                <div style="line-height:2;">
+                    <p><b>أهلاً:</b> ${d.name}</p>
+                    <p><b>قيمة الطلب:</b> ${d.price} ج.م</p>
+                    <p><b>الحالة:</b> <span style="color:blue; font-weight:bold;">${d.status}</span></p>
+                    <p style="font-size:14px; color:#777; margin-top:10px;">تم تحديث البيانات تلقائياً من بوليصة الشحن.</p>
                 </div>`;
-        } else {
-            alert("لا يوجد شحنة مسجلة لهذا الرقم.");
-        }
+        } else { alert("لا توجد شحنة مسجلة لهذا الرقم."); }
     });
 }
 
-// تحويل الصورة لرابط نصي لحفظها في القاعدة مباشرة
-function toBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-}
+// دالة معالجة الـ PDF المخصصة لشركة ABS
+async function startAutoProcess() {
+    const fileInput = document.getElementById("pdfFile");
+    const log = document.getElementById("processLog");
+    if(!fileInput.files[0]) return alert("يرجى اختيار ملف PDF أولاً");
 
-async function addShipment(){
-    const phone = document.getElementById("phone").value.trim();
-    const name = document.getElementById("name").value.trim();
-    const details = document.getElementById("details").value.trim();
-    const status = document.getElementById("status").value;
-    const file = document.getElementById("image").files[0];
-
-    if(!phone || !name || !details){ alert("يرجى إكمال البيانات"); return; }
-
-    document.getElementById("loader").style.display = "block";
-    document.getElementById("addBtn").disabled = true;
-
-    let imageUrl = "";
-    if(file){
-        imageUrl = await toBase64(file);
-    }
-
-    await db.ref("shipments/" + phone).set({
-        name: name,
-        details: details,
-        status: status,
-        image: imageUrl,
-        time: Date.now()
-    });
-
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("addBtn").disabled = false;
-    alert("تم إضافة الشحنة بنجاح");
+    log.innerHTML = "> بدء قراءة ملف ABS...<br>";
+    const file = fileInput.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
     
-    // مسح الحقول
-    document.getElementById("phone").value = "";
-    document.getElementById("name").value = "";
-    document.getElementById("details").value = "";
-    document.getElementById("image").value = "";
-}
+    log.innerHTML += `> عدد الصفحات: ${pdf.numPages}<br>`;
 
-function loadShipments(){
-    db.ref("shipments").on("value", snapshot => {
-        const data = snapshot.val();
-        let html = "";
-        for(let phone in data){
-            const s = data[phone];
-            html += `
-                <div class="shipment">
-                    <p><b>العميل:</b> ${s.name} (${phone})</p>
-                    <p><b>الحالة:</b> ${s.status}</p>
-                    <button class="delete-btn" onclick="deleteShipment('${phone}')">حذف الشحنة</button>
-                </div>`;
+    for(let i=1; i<=pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const textItems = textContent.items.map(item => item.str);
+        const fullText = textItems.join(" ");
+
+        // استخراج البيانات بناءً على شكل البوليصة المرفقة
+        // 1. استخراج رقم الهاتف (يبدأ بـ 01)
+        const phoneMatch = fullText.match(/01[0125][0-9]{8}/);
+        const phone = phoneMatch ? phoneMatch[0] : null;
+
+        // 2. استخراج السعر (COD) - عادة يأتي بجانب كلمة COD أو أرقام كبيرة
+        const priceMatch = fullText.match(/COD\s*(\d+)/i) || fullText.match(/(\d{3,4})\s*750/); // 750 ظهرت في صورتك
+        const price = priceMatch ? priceMatch[1] : "غير محدد";
+
+        // 3. استخراج الاسم (يأتي عادة بعد Ref To:)
+        const nameMatch = fullText.match(/To\s*:\s*([\u0600-\u06FF\s]+)/);
+        const name = nameMatch ? nameMatch[1].trim() : "عميل طلة";
+
+        if(phone) {
+            log.innerHTML += `> تم اكتشاف: <span class="success-tag">${name}</span> | رقم: ${phone}<br>`;
+            
+            // حفظ في Firebase
+            await db.ref("shipments/" + phone).update({
+                name: name,
+                price: price,
+                status: "تم التأكيد في شركة الشحن",
+                details: "تم الاستخراج من بوليصة ABS تلقائياً",
+                lastUpdate: new Date().toLocaleString('ar-EG')
+            });
         }
-        document.getElementById("allShipments").innerHTML = html || "لا يوجد شحنات حالياً";
-    });
-}
-
-function deleteShipment(phone){
-    if(confirm("هل أنت متأكد من حذف هذه الشحنة؟")){
-        db.ref("shipments/" + phone).remove();
     }
-}
-
-function askAI(){
-    const q = document.getElementById("aiInput").value.toLowerCase();
-    let res = "";
-    if(q.includes("وصل") || q.includes("متى")){
-        res = "شحنات طلة تستغرق عادة من 3 إلى 5 أيام عمل. يمكنك مراجعة الحالة بالأعلى لمعرفة أين وصلت شحنتك الآن.";
-    } else if(q.includes("شحن") || q.includes("سعر")){
-        res = "مصاريف الشحن تختلف حسب المحافظة، وسيتم إبلاغك بها عند تأكيد المندوب للطلب.";
-    } else if(q.includes("تبديل") || q.includes("ترجيع")){
-        res = "نعم، متاح المعاينة والتبديل أثناء وجود المندوب لضمان أعلى جودة من طلة.";
-    } else {
-        res = "شكراً لثقتك في براند طلة! أنا هنا لمساعدتك، يمكنك السؤال عن حالة شحنتك أو سياسة الاسترجاع.";
-    }
-    document.getElementById("aiResponse").innerText = res;
+    log.innerHTML += "> <span class='success-tag'>✓ اكتملت العملية بنجاح!</span>";
+    alert("تم سحب كافة البيانات وحفظها في قاعدة البيانات.");
 }
 </script>
 </body>
